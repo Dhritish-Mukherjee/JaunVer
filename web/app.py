@@ -31,6 +31,7 @@ from src.preprocessing.pipeline import clean_and_preprocess_data
 
 # ─── Page Setup ────────────────────────────────────────────
 ICON_PATH = REPO_ROOT / "assets" / "jaunver_icon.svg"
+LOGO_PATH = REPO_ROOT / "assets" / "jaunver.png"
 
 st.set_page_config(
     page_title="JaunVer",
@@ -169,7 +170,9 @@ feature_names = prep["feature_names"]
 
 
 # ─── Sidebar ──────────────────────────────────────────────
-if ICON_PATH.is_file():
+if LOGO_PATH.is_file():
+    st.sidebar.image(str(LOGO_PATH), width=85)
+elif ICON_PATH.is_file():
     st.sidebar.image(str(ICON_PATH), width=75)
 st.sidebar.title("JaunVer")
 st.sidebar.caption("Liver Disease Classification System")
@@ -182,10 +185,11 @@ st.sidebar.markdown(
 )
 
 # ─── Header ───────────────────────────────────────────────
-if ICON_PATH.is_file():
+brand_img = LOGO_PATH if LOGO_PATH.is_file() else ICON_PATH
+if brand_img.is_file():
     h_col1, h_col2 = st.columns([1, 14], vertical_alignment="center")
     with h_col1:
-        st.image(str(ICON_PATH), width=65)
+        st.image(str(brand_img), width=70)
     with h_col2:
         st.markdown("""
         <div>

@@ -15,7 +15,7 @@ JaunVer/
 │   └── raw/
 │       └── indian_liver_patient.csv    # Original raw dataset (583 records, 11 features)
 ├── assets/
-│   └── jaunver_icon.svg                # JaunVer medical AI liver emblem (tab icon & branding)
+│   ├── jaunver.png                     # Official JaunVer logo
 │   └── jaunver_icon.svg                # Browser tab icon
 ├── src/
 │   ├── data/
