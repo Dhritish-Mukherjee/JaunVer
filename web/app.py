@@ -31,7 +31,7 @@ from src.preprocessing.pipeline import clean_and_preprocess_data
 
 # ─── Page Setup ────────────────────────────────────────────
 ICON_PATH = REPO_ROOT / "assets" / "jaunver_icon.svg"
-LOGO_PATH = REPO_ROOT / "assets" / "logo.png"
+LOGO_PATH = REPO_ROOT / "assets" / "jaunver_logo.png"
 
 st.set_page_config(
     page_title="JaunVer",

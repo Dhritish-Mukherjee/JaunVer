@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 520" role="img" aria-labelledby="title desc">
+  <title id="title">JaunVer logo</title>
+  <desc id="desc">A red liver-shaped emblem with a molecular network, above the JaunVer wordmark. Transparent background.</desc>
+  <defs>
+    <linearGradient id="liver" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff514b"/>
+      <stop offset=".48" stop-color="#e20b20"/>
+      <stop offset="1" stop-color="#790018"/>
+    </linearGradient>
+    <linearGradient id="liverRight" x1="0" y1="0" x2="1" y2=".8">
+      <stop offset="0" stop-color="#ff493d"/>
+      <stop offset="1" stop-color="#c9001c"/>
+    </linearGradient>
+    <linearGradient id="wordRed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff302c"/>
+      <stop offset="1" stop-color="#d90020"/>
+    </linearGradient>
+  </defs>
+  <!-- Stylized liver silhouette -->
+  <path d="M105 172 C108 105 165 63 239 66 C293 68 332 92 373 94 C414 96 464 84 516 91 C550 96 557 118 540 143 C519 174 490 194 465 218 C439 244 418 274 381 290 C351 304 318 293 290 305 C251 322 225 357 185 351 C149 345 139 315 132 283 C122 243 101 210 105 172Z" fill="url(#liver)"/>
+  <path d="M370 96 C401 104 414 125 406 157 C398 190 376 221 355 247 C337 270 321 292 290 305 C322 307 346 295 367 282 C407 256 427 219 454 194 C480 170 512 146 523 123 C532 104 514 92 485 92 C445 92 407 101 370 96Z" fill="url(#liverRight)"/>
+  <!-- Flowing negative-space ribbon -->
+  <path d="M145 321 C164 289 190 271 229 263 C266 255 298 262 321 243 C347 222 353 181 365 145 C371 126 381 109 399 99 C380 99 366 101 352 107 C333 116 325 137 319 163 C311 199 306 228 284 242 C259 257 226 249 197 259 C170 268 150 287 145 321Z" fill="#fff" opacity=".96"/>
+  <!-- Subtle inner red sweep -->
+  <path d="M145 321 C162 294 186 278 216 270 C195 286 180 304 174 333 C165 330 153 326 145 321Z" fill="#ffb1ad" opacity=".75"/>
+  <!-- Molecular / data network -->
+  <g stroke="#fff4f3" stroke-width="3.2" stroke-linecap="round" fill="none" opacity=".98">
+    <path d="M157 161 L190 184 L224 160 L251 195 L218 218 L190 184 L185 229 L218 218 L251 195 L278 205"/>
+    <path d="M157 161 L151 207 L185 229"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="157" cy="161" r="7.5"/><circle cx="190" cy="184" r="6.5"/>
+    <circle cx="224" cy="160" r="5.2"/><circle cx="251" cy="195" r="7"/>
+    <circle cx="218" cy="218" r="6.2"/><circle cx="185" cy="229" r="5.5"/>
+    <circle cx="151" cy="207" r="8"/><circle cx="278" cy="205" r="4.5"/>
+  </g>
+  <!-- Wordmark -->
+  <g font-family="Inter, Montserrat, Arial, sans-serif" font-size="94" font-weight="750" letter-spacing="-5">
+    <text x="68" y="456" fill="#650016">Jaun</text>
+    <text x="282" y="456" fill="url(#wordRed)">Ver</text>
+  </g>
+</svg>
