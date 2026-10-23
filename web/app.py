@@ -30,9 +30,12 @@ from src.models.perceptron import Perceptron
 from src.preprocessing.pipeline import clean_and_preprocess_data
 
 # ─── Page Setup ────────────────────────────────────────────
+ICON_PATH = REPO_ROOT / "assets" / "jaunver_icon.svg"
+LOGO_PATH = REPO_ROOT / "assets" / "logo.png"
+
 st.set_page_config(
     page_title="JaunVer",
-    page_icon="H",
+    page_icon=str(ICON_PATH) if ICON_PATH.is_file() else "H",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -129,8 +132,20 @@ def get_preprocessed():
 @st.cache_resource
 def load_bundle():
     bundle_path = REPO_ROOT / "artifacts" / "model_bundle.pkl"
+    if not bundle_path.is_file():
+        from scripts.export_models import export_models
+        export_models()
+
     with open(bundle_path, "rb") as f:
-        return pickle.load(f)
+        bundle = pickle.load(f)
+
+    if "knn" not in bundle:
+        from scripts.export_models import export_models
+        export_models()
+        with open(bundle_path, "rb") as f:
+            bundle = pickle.load(f)
+
+    return bundle
 
 
 @st.cache_resource
@@ -154,15 +169,44 @@ y_train, y_test = prep["y_train"], prep["y_test"]
 feature_names = prep["feature_names"]
 
 
+# ─── Sidebar ──────────────────────────────────────────────
+if LOGO_PATH.is_file():
+    st.sidebar.image(str(LOGO_PATH), use_container_width=True)
+st.sidebar.title("JaunVer")
+st.sidebar.caption("Liver Disease Classification System")
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    "**Coursework:** B.Tech Project  \n"
+    "**Dataset:** Indian Liver Patient Dataset (UCI)  \n"
+    "**Models:** Logistic Regression, Perceptron, K-NN (k=5)  \n"
+    "**Engine:** 100% From-Scratch NumPy"
+)
+
 # ─── Header ───────────────────────────────────────────────
-st.markdown("""
-<div style="margin-bottom: 1.5rem;">
-    <h1 style="margin-bottom: 4px; font-weight: 700; letter-spacing: -0.5px;">JaunVer</h1>
-    <p style="color: #8892A0; font-size: 1rem; margin-top: 0;">
-        End-to-end liver disease classification pipeline — implemented from scratch in NumPy
-    </p>
-</div>
-""", unsafe_allow_html=True)
+if LOGO_PATH.is_file():
+    h_col1, h_col2 = st.columns([1, 9], vertical_alignment="center")
+    with h_col1:
+        st.image(str(LOGO_PATH), width=80)
+    with h_col2:
+        st.markdown("""
+        <div>
+            <h1 style="margin: 0; font-weight: 700; letter-spacing: -0.5px;">JaunVer</h1>
+            <p style="color: #8892A0; font-size: 0.95rem; margin: 4px 0 0 0;">
+                End-to-end liver disease classification pipeline — implemented from scratch in NumPy
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div style="margin-bottom: 1.5rem;">
+        <h1 style="margin-bottom: 4px; font-weight: 700; letter-spacing: -0.5px;">JaunVer</h1>
+        <p style="color: #8892A0; font-size: 1rem; margin-top: 0;">
+            End-to-end liver disease classification pipeline — implemented from scratch in NumPy
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("<div style='margin-bottom: 1.25rem;'></div>", unsafe_allow_html=True)
 
 
 # ─── Tabs ─────────────────────────────────────────────────

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 360" width="1024" height="720" role="img" aria-label="Red liver medical AI icon">
+  <defs>
+    <linearGradient id="outer" x1="0" y1="0" x2=".85" y2="1"><stop offset="0" stop-color="#ff7770"/><stop offset=".25" stop-color="#f51e25"/><stop offset=".62" stop-color="#bd0014"/><stop offset="1" stop-color="#750014"/></linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="1" y2=".9"><stop offset="0" stop-color="#ff6a53"/><stop offset=".48" stop-color="#fa171e"/><stop offset="1" stop-color="#a90017"/></linearGradient>
+    <linearGradient id="shadow" x1="0" y1="0" x2=".8" y2="1"><stop offset="0" stop-color="#a90017"/><stop offset="1" stop-color="#520014"/></linearGradient>
+    <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2=".2"><stop offset="0" stop-color="#ffd1c7"/><stop offset=".45" stop-color="#fff8f4"/><stop offset="1" stop-color="#ffb6a0"/></linearGradient>
+    <linearGradient id="node" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#fffdfb"/><stop offset="1" stop-color="#ffc5b8"/></linearGradient>
+  </defs>
+  <!-- Main liver silhouette -->
+  <path d="M55 133 C59 67 115 29 189 36 C238 40 276 58 321 62 C367 66 415 56 456 58 C478 59 488 71 480 91 C467 122 435 147 410 178 C388 204 365 221 335 222 C307 222 289 209 264 226 C231 249 213 286 179 316 C157 335 137 329 124 310 C100 276 81 237 69 198 C61 174 53 153 55 133Z" fill="url(#outer)" stroke="#e91320" stroke-width="2"/>
+  <!-- Deep left lobe -->
+  <path d="M61 135 C68 78 117 47 181 50 C220 52 253 68 283 79 C245 88 218 106 197 130 C169 161 145 187 121 211 C99 234 83 258 78 283 C66 249 58 210 58 178 C57 161 57 147 61 135Z" fill="url(#shadow)"/>
+  <!-- Upper highlight -->
+  <path d="M62 132 C69 76 119 43 183 47 C225 50 263 66 302 75 C258 76 224 91 195 111 C158 136 128 162 91 180 C75 188 65 201 65 220 C58 188 56 155 62 132Z" fill="#ff4644" opacity=".58"/>
+  <!-- Right lobe -->
+  <path d="M285 80 C331 70 383 67 451 66 C472 66 482 73 474 91 C461 120 432 143 406 175 C383 202 360 218 334 217 C312 216 297 205 278 207 C299 175 306 142 285 80Z" fill="url(#right)"/>
+  <path d="M318 91 C361 83 411 80 463 82 C439 101 411 124 386 151 C362 177 344 192 322 197 C309 199 299 196 288 191 C310 160 322 126 318 91Z" fill="#c90019" opacity=".58"/>
+  <!-- Flowing pale ribbon -->
+  <path d="M304 67 C286 84 278 105 278 131 C279 161 269 182 248 194 C227 206 194 201 165 211 C134 221 111 242 99 274 C92 292 93 307 103 319 C110 290 128 265 153 249 C184 229 218 231 248 223 C282 214 300 191 304 161 C308 133 298 106 310 82 C315 73 322 68 331 64Z" fill="url(#ribbon)"/>
+  <path d="M321 65 C306 82 303 105 305 129 C308 159 300 186 280 205 C263 221 239 229 213 232 C247 236 279 224 298 205 C321 182 328 153 325 125 C322 102 326 81 344 63Z" fill="#ff9b7f" opacity=".75"/>
+  <!-- Molecular network -->
+  <g fill="none" stroke="#fff0e9" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" opacity=".98">
+    <path d="M105 128 L132 146 L91 171 L116 198 L154 171 L177 192 L196 160 L210 185 L231 182"/>
+    <path d="M105 128 L91 171 M132 146 L154 171 M154 171 L116 198 M177 192 L196 160 L210 185"/>
+    <path d="M91 171 C77 190 70 211 69 232"/>
+  </g>
+  <g fill="url(#node)" stroke="#fff8f4" stroke-width=".8">
+    <circle cx="105" cy="128" r="8.5"/><circle cx="132" cy="146" r="7.2"/><circle cx="91" cy="171" r="10"/><circle cx="116" cy="198" r="7.5"/><circle cx="154" cy="171" r="7.3"/><circle cx="177" cy="192" r="5.5"/><circle cx="196" cy="160" r="5.5"/><circle cx="210" cy="185" r="5.8"/><circle cx="231" cy="182" r="3.5"/>
+  </g>
+</svg>
