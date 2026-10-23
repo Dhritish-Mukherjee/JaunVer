@@ -1,4 +1,4 @@
-# HepatoPredict: Step-by-Step Project Plan
+# JaunVer: Step-by-Step Project Plan
 
 **Goal:** Build a complete, from-scratch Machine Learning classification system for liver disease prediction without external ML libraries (no `scikit-learn`), fully prepared for oral viva defense within a 4-day deadline.
 

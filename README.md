@@ -1,4 +1,4 @@
-# HepatoPredict: Liver Disease Classification System
+# JaunVer: Liver Disease Classification System
 
 An educational Machine Learning project built from scratch using NumPy and Python to classify liver disease using the Indian Liver Patient Dataset (ILPD).
 

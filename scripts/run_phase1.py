@@ -48,7 +48,7 @@ def print_metrics_table(title: str, report: dict) -> None:
 
 def main() -> None:
     print("=" * 70)
-    print("      HEPATOPREDICT: PHASE 1 FROM-SCRATCH ML PIPELINE")
+    print("         JAUNVER: PHASE 1 FROM-SCRATCH ML PIPELINE")
     print("=" * 70)
 
     # 1. Load Data

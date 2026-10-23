@@ -1,4 +1,4 @@
-"""HepatoPredict — Interactive ML Pipeline Dashboard.
+"""JaunVer — Interactive ML Pipeline Dashboard.
 
 Five-stage walkthrough: data inspection, preprocessing, training,
 evaluation, and live inference for liver disease classification.
@@ -30,7 +30,7 @@ from src.preprocessing.pipeline import clean_and_preprocess_data
 
 # ─── Page Setup ────────────────────────────────────────────
 st.set_page_config(
-    page_title="HepatoPredict",
+    page_title="JaunVer",
     page_icon="H",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -154,7 +154,7 @@ feature_names = prep["feature_names"]
 # ─── Header ───────────────────────────────────────────────
 st.markdown("""
 <div style="margin-bottom: 1.5rem;">
-    <h1 style="margin-bottom: 4px; font-weight: 700; letter-spacing: -0.5px;">HepatoPredict</h1>
+    <h1 style="margin-bottom: 4px; font-weight: 700; letter-spacing: -0.5px;">JaunVer</h1>
     <p style="color: #8892A0; font-size: 1rem; margin-top: 0;">
         End-to-end liver disease classification pipeline — implemented from scratch in NumPy
     </p>
@@ -708,6 +708,6 @@ with tab5:
 # ─── Footer ───────────────────────────────────────────────
 st.markdown("---")
 st.caption(
-    "**Disclaimer:** HepatoPredict is an educational research project. All algorithms were "
+    "**Disclaimer:** JaunVer is an educational research project. All algorithms were "
     "implemented from scratch using NumPy. Not intended for clinical use."
 )
