@@ -31,7 +31,6 @@ from src.preprocessing.pipeline import clean_and_preprocess_data
 
 # ─── Page Setup ────────────────────────────────────────────
 ICON_PATH = REPO_ROOT / "assets" / "jaunver_icon.svg"
-LOGO_PATH = REPO_ROOT / "assets" / "jaunver_logo.png"
 
 st.set_page_config(
     page_title="JaunVer",
@@ -170,8 +169,8 @@ feature_names = prep["feature_names"]
 
 
 # ─── Sidebar ──────────────────────────────────────────────
-if LOGO_PATH.is_file():
-    st.sidebar.image(str(LOGO_PATH), use_container_width=True)
+if ICON_PATH.is_file():
+    st.sidebar.image(str(ICON_PATH), width=75)
 st.sidebar.title("JaunVer")
 st.sidebar.caption("Liver Disease Classification System")
 st.sidebar.markdown("---")
@@ -183,14 +182,14 @@ st.sidebar.markdown(
 )
 
 # ─── Header ───────────────────────────────────────────────
-if LOGO_PATH.is_file():
-    h_col1, h_col2 = st.columns([1, 9], vertical_alignment="center")
+if ICON_PATH.is_file():
+    h_col1, h_col2 = st.columns([1, 14], vertical_alignment="center")
     with h_col1:
-        st.image(str(LOGO_PATH), width=80)
+        st.image(str(ICON_PATH), width=65)
     with h_col2:
         st.markdown("""
         <div>
-            <h1 style="margin: 0; font-weight: 700; letter-spacing: -0.5px;">JaunVer</h1>
+            <h1 style="margin: 0; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">JaunVer</h1>
             <p style="color: #8892A0; font-size: 0.95rem; margin: 4px 0 0 0;">
                 End-to-end liver disease classification pipeline — implemented from scratch in NumPy
             </p>
