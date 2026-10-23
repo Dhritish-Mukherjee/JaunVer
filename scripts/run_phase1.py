@@ -20,6 +20,7 @@ from src.metrics.classification import (
     classification_report,
     confusion_matrix,
 )
+from src.models.knn import KNearestNeighbors
 from src.models.logistic_regression import LogisticRegression
 from src.models.perceptron import Perceptron
 from src.preprocessing.pipeline import clean_and_preprocess_data
@@ -109,15 +110,29 @@ def main() -> None:
     print("\nConfusion Matrix (Perceptron Test Set):")
     print(format_confusion_matrix_text(cm_perc))
 
-    # 5. Side-by-Side Comparison
-    print("\n" + "=" * 70)
-    print(f"{'Metric':<18} | {'Logistic Regression':<22} | {'Perceptron':<20}")
-    print("-" * 70)
+    # 5. Model 3: K-Nearest Neighbors (k=5)
+    print("\n[5] Evaluating K-Nearest Neighbors (k=5)...")
+    knn = KNearestNeighbors(n_neighbors=5)
+    knn.fit(X_train, y_train)
+
+    knn_test_preds = knn.predict(X_test)
+    knn_test_report = classification_report(y_test, knn_test_preds)
+
+    print_metrics_table("KNN (Test Set Evaluation)", knn_test_report)
+    cm_knn = confusion_matrix(y_test, knn_test_preds)
+    print("\nConfusion Matrix (KNN Test Set):")
+    print(format_confusion_matrix_text(cm_knn))
+
+    # 6. Side-by-Side Comparison
+    print("\n" + "=" * 82)
+    print(f"{'Metric':<18} | {'Logistic Regression':<20} | {'Perceptron':<16} | {'KNN (k=5)':<16}")
+    print("-" * 82)
     for metric in ["accuracy", "precision", "recall", "specificity", "f1_score"]:
         lr_val = lr_test_report[metric] * 100
         perc_val = perc_test_report[metric] * 100
-        print(f"{metric.replace('_', ' ').capitalize():<18} | {lr_val:>20.2f}% | {perc_val:>18.2f}%")
-    print("=" * 70)
+        knn_val = knn_test_report[metric] * 100
+        print(f"{metric.replace('_', ' ').capitalize():<18} | {lr_val:>18.2f}% | {perc_val:>14.2f}% | {knn_val:>14.2f}%")
+    print("=" * 82)
 
     # 6. Save Convergence Figure
     fig_dir = Path("reports/figures")

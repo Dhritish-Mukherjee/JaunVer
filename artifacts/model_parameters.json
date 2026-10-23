@@ -73,5 +73,10 @@
     "bias": 0.03,
     "learning_rate": 0.01,
     "n_iterations": 100
+  },
+  "knn": {
+    "n_neighbors": 5,
+    "metric": "euclidean",
+    "n_training_samples": 456
   }
 }

@@ -70,7 +70,7 @@
 
 > **Objective:** Add non-parametric and probabilistic models, manual K-Fold Cross Validation, and class imbalance mitigation.
 
-### Step 2.1: K-Nearest Neighbors (KNN) (From Scratch)
+### Step 2.1: K-Nearest Neighbors (KNN) (From Scratch) - [COMPLETED]
 - Vectorized Euclidean distance computation between test query and training instances.
 - Efficient sorting / top-$k$ selection.
 - Majority voting mechanism and tie-breaking strategy.

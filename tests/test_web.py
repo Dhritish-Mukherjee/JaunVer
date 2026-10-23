@@ -17,6 +17,7 @@ def test_model_bundle_exists_and_predicts():
     assert "scaler" in bundle
     assert "logistic_regression" in bundle
     assert "perceptron" in bundle
+    assert "knn" in bundle
     assert "train_median_ag_ratio" in bundle
     assert "feature_names" in bundle
 
@@ -29,3 +30,6 @@ def test_model_bundle_exists_and_predicts():
 
     perc_pred = bundle["perceptron"].predict(scaled_sample)[0]
     assert perc_pred in (0, 1)
+
+    knn_pred = bundle["knn"].predict(scaled_sample)[0]
+    assert knn_pred in (0, 1)

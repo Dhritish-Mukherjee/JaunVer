@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.data.loader import load_raw_data
+from src.models.knn import KNearestNeighbors
 from src.models.logistic_regression import LogisticRegression
 from src.models.perceptron import Perceptron
 from src.preprocessing.pipeline import clean_and_preprocess_data
@@ -54,6 +55,10 @@ def export_models() -> Path:
     perc = Perceptron(learning_rate=0.01, n_iterations=100, random_state=42)
     perc.fit(X_train, y_train)
 
+    print("Fitting K-Nearest Neighbors (k=5)...")
+    knn = KNearestNeighbors(n_neighbors=5)
+    knn.fit(X_train, y_train)
+
     # 3. Create Artifact Bundle
     bundle = {
         "scaler": prep["scaler"],
@@ -61,6 +66,7 @@ def export_models() -> Path:
         "feature_names": prep["feature_names"],
         "logistic_regression": lr,
         "perceptron": perc,
+        "knn": knn,
         "clinical_reference_ranges": CLINICAL_REFERENCE_RANGES,
     }
 
@@ -91,6 +97,11 @@ def export_models() -> Path:
             "bias": float(perc.bias_),
             "learning_rate": perc.learning_rate,
             "n_iterations": perc.n_iterations,
+        },
+        "knn": {
+            "n_neighbors": knn.n_neighbors,
+            "metric": "euclidean",
+            "n_training_samples": len(X_train),
         },
     }
 

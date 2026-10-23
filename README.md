@@ -22,7 +22,8 @@ JaunVer/
 │   │   └── pipeline.py                 # Leakage-free train/test split and train-median imputation
 │   ├── models/
 │   │   ├── logistic_regression.py     # From-scratch Logistic Regression (Batch Gradient Descent)
-│   │   └── perceptron.py               # From-scratch Rosenblatt Perceptron classifier
+│   │   ├── perceptron.py               # From-scratch Rosenblatt Perceptron classifier
+│   │   └── knn.py                      # From-scratch K-Nearest Neighbors classifier (Euclidean distance)
 │   └── metrics/
 │       └── classification.py           # Confusion matrix, Accuracy, Precision, Recall, F1
 ├── artifacts/

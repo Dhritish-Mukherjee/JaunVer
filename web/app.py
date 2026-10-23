@@ -24,6 +24,7 @@ from src.data.loader import (
     load_raw_data,
 )
 from src.metrics.classification import classification_report, confusion_matrix
+from src.models.knn import KNearestNeighbors
 from src.models.logistic_regression import LogisticRegression
 from src.models.perceptron import Perceptron
 from src.preprocessing.pipeline import clean_and_preprocess_data
@@ -139,13 +140,15 @@ def train_models_for_display():
     lr.fit(prep["X_train"], prep["y_train"])
     perc = Perceptron(learning_rate=0.01, n_iterations=100, random_state=42)
     perc.fit(prep["X_train"], prep["y_train"])
-    return lr, perc
+    knn = KNearestNeighbors(n_neighbors=5)
+    knn.fit(prep["X_train"], prep["y_train"])
+    return lr, perc, knn
 
 
 raw_df = get_raw_data()
 prep = get_preprocessed()
 bundle = load_bundle()
-lr_model, perc_model = train_models_for_display()
+lr_model, perc_model, knn_model = train_models_for_display()
 X_train, X_test = prep["X_train"], prep["X_test"]
 y_train, y_test = prep["y_train"], prep["y_test"]
 feature_names = prep["feature_names"]
@@ -315,7 +318,11 @@ with tab3:
     st.markdown("#### Model Training")
     st.markdown("")
 
-    lr_tab, perc_tab = st.tabs(["Logistic Regression", "Perceptron"])
+    lr_tab, perc_tab, knn_tab = st.tabs([
+        "Logistic Regression",
+        "Perceptron",
+        "K-Nearest Neighbors (KNN)",
+    ])
 
     with lr_tab:
         math_l, math_r = st.columns(2)
@@ -433,6 +440,59 @@ with tab3:
             "decision boundary from stabilizing."
         )
 
+    with knn_tab:
+        kc1, kc2 = st.columns(2)
+        with kc1:
+            st.markdown("**Vectorized Euclidean Distance**")
+            st.latex(r"d(x, x^{(i)}) = \sqrt{\sum_{j=1}^d (x_j - x_j^{(i)})^2} = \|x - x^{(i)}\|_2")
+            st.markdown("**Instance-Based Learning**")
+            st.markdown(
+                "KNN is a **non-parametric lazy learner**: it has no training phase and "
+                "memorizes all training vectors. At inference time, distances to all training "
+                "samples are computed to find the $k$ nearest neighbors."
+            )
+        with kc2:
+            st.markdown("**Posterior Probability & Majority Vote**")
+            st.latex(r"\hat{P}(Y=1 \mid x) = \frac{1}{k} \sum_{i \in \mathcal{N}_k(x)} y^{(i)}")
+            st.latex(r"\hat{y} = \text{mode}\left(\{y^{(i)} : i \in \mathcal{N}_k(x)\}\right)")
+            st.markdown(
+                "We set $k=5$ (odd integer) to prevent tie-breaking ambiguity. "
+                "KNN captures **non-linear local decision surfaces** without assuming "
+                "a rigid global linear boundary."
+            )
+
+        st.markdown("---")
+
+        # Test distance distribution
+        k_dists, _ = knn_model.kneighbors(X_test)
+        avg_5th_dists = k_dists[:, -1]
+
+        fig_knn_dist = go.Figure()
+        fig_knn_dist.add_trace(go.Histogram(
+            x=avg_5th_dists,
+            nbinsx=25,
+            marker=dict(color="#3DAF6B", line=dict(color="#1A1F2B", width=1), cornerradius=4),
+            hovertemplate="Distance: %{x:.2f}<br>Count: %{y}<extra></extra>",
+        ))
+        fig_knn_dist.update_layout(plotly_layout(
+            height=340,
+            xaxis_title="Euclidean Distance to 5th Nearest Neighbor",
+            yaxis_title="Test Patients",
+            title=dict(text="Test Set Neighborhood Density Distribution (k=5)", font=dict(size=15)),
+        ))
+        st.plotly_chart(fig_knn_dist, use_container_width=True)
+
+        km1, km2, km3 = st.columns(3)
+        km1.metric("Hyperparameter (k)", "5")
+        km2.metric("Distance Metric", "Euclidean (L2)")
+        km3.metric("Training Memory", f"{len(X_train)} samples")
+
+        st.markdown(
+            "Feature standardization is critical for KNN: without Z-score normalization, "
+            "high-magnitude enzymes (e.g. ALP up to 2110) would distort the Euclidean metric "
+            "and ignore smaller markers like Bilirubin."
+        )
+
 
 # ══════════════════════════════════════════════════════════
 # TAB 4 — EVALUATION
@@ -444,12 +504,17 @@ with tab4:
 
     lr_preds = lr_model.predict(X_test)
     perc_preds = perc_model.predict(X_test)
+    knn_preds = knn_model.predict(X_test)
+
     lr_rep = classification_report(y_test, lr_preds)
     perc_rep = classification_report(y_test, perc_preds)
+    knn_rep = classification_report(y_test, knn_preds)
+
     cm_lr = confusion_matrix(y_test, lr_preds)
     cm_perc = confusion_matrix(y_test, perc_preds)
+    cm_knn = confusion_matrix(y_test, knn_preds)
 
-    cm1, cm2 = st.columns(2, gap="large")
+    cm1, cm2, cm3 = st.columns(3, gap="medium")
 
     def make_cm_figure(cm, title, color_scale):
         labels = ["Healthy (0)", "Diseased (1)"]
@@ -458,12 +523,12 @@ with tab4:
             z=cm, x=labels, y=labels,
             colorscale=color_scale,
             text=text_matrix, texttemplate="%{text}",
-            textfont=dict(size=22, color="white"),
+            textfont=dict(size=20, color="white"),
             showscale=False,
             hovertemplate="Actual: %{y}<br>Predicted: %{x}<br>Count: %{z}<extra></extra>",
         ))
         fig.update_layout(plotly_layout(
-            height=320,
+            height=300,
             title=dict(text=title, font=dict(size=14)),
             xaxis=dict(title="Predicted", gridcolor="rgba(0,0,0,0)", side="bottom"),
             yaxis=dict(title="Actual", gridcolor="rgba(0,0,0,0)", autorange="reversed"),
@@ -480,6 +545,11 @@ with tab4:
             make_cm_figure(cm_perc, "Perceptron", [[0, "#1A1F2B"], [1, ACCENT_ORANGE]]),
             use_container_width=True,
         )
+    with cm3:
+        st.plotly_chart(
+            make_cm_figure(cm_knn, "KNN (k=5)", [[0, "#1A1F2B"], [1, ACCENT_GREEN]]),
+            use_container_width=True,
+        )
 
     st.markdown("---")
 
@@ -489,24 +559,31 @@ with tab4:
     keys = ["accuracy", "precision", "recall", "specificity", "f1_score"]
     lr_vals = [lr_rep[k] * 100 for k in keys]
     perc_vals = [perc_rep[k] * 100 for k in keys]
+    knn_vals = [knn_rep[k] * 100 for k in keys]
 
     fig_compare = go.Figure()
     fig_compare.add_trace(go.Bar(
         name="Logistic Regression", x=metric_names, y=lr_vals,
         marker=dict(color=ACCENT_BLUE, cornerradius=4),
         text=[f"{v:.1f}%" for v in lr_vals], textposition="outside",
-        textfont=dict(size=12, color=TEXT_COLOR),
+        textfont=dict(size=11, color=TEXT_COLOR),
     ))
     fig_compare.add_trace(go.Bar(
         name="Perceptron", x=metric_names, y=perc_vals,
         marker=dict(color=ACCENT_ORANGE, cornerradius=4),
         text=[f"{v:.1f}%" for v in perc_vals], textposition="outside",
-        textfont=dict(size=12, color=TEXT_COLOR),
+        textfont=dict(size=11, color=TEXT_COLOR),
+    ))
+    fig_compare.add_trace(go.Bar(
+        name="KNN (k=5)", x=metric_names, y=knn_vals,
+        marker=dict(color=ACCENT_GREEN, cornerradius=4),
+        text=[f"{v:.1f}%" for v in knn_vals], textposition="outside",
+        textfont=dict(size=11, color=TEXT_COLOR),
     ))
     fig_compare.update_layout(plotly_layout(
-        height=400,
+        height=420,
         barmode="group",
-        yaxis=dict(title="Score (%)", range=[0, 110], gridcolor=GRID_COLOR),
+        yaxis=dict(title="Score (%)", range=[0, 115], gridcolor=GRID_COLOR),
         xaxis=dict(gridcolor="rgba(0,0,0,0)"),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
@@ -527,7 +604,7 @@ with tab4:
 
     st.markdown("---")
     st.markdown("##### Clinical Significance")
-    cx1, cx2 = st.columns(2)
+    cx1, cx2, cx3 = st.columns(3)
     with cx1:
         st.success(
             f"**Logistic Regression Recall: {lr_rep['recall']*100:.1f}%** — "
@@ -541,6 +618,12 @@ with tab4:
             f"{int(perc_rep['false_negatives'])} of "
             f"{int(perc_rep['true_positives'] + perc_rep['false_negatives'])} "
             f"diseased patients were misclassified."
+        )
+    with cx3:
+        st.info(
+            f"**KNN Specificity: {knn_rep['specificity']*100:.1f}%** — "
+            f"Better balanced specificity ({int(knn_rep['true_negatives'])} true negatives) "
+            f"demonstrating local non-linear clustering capability."
         )
     st.markdown(
         "In screening applications, false negatives carry higher cost than false positives. "
@@ -616,24 +699,27 @@ with tab5:
     lr_c = int(lr_p >= 0.5)
     ps = float(bundle["perceptron"].decision_function(svec)[0])
     pc = 1 if ps >= 0 else 0
+    knn_p = float(bundle["knn"].predict_proba(svec)[0])
+    knn_c = int(knn_p >= 0.5)
+    knn_dists, knn_idx = bundle["knn"].kneighbors(svec)
 
     st.markdown("---")
-    r1, r2 = st.columns(2, gap="large")
+    r1, r2, r3 = st.columns(3, gap="medium")
 
     with r1:
         st.markdown("##### Logistic Regression")
         if lr_c == 1:
-            st.error(f"**High Risk** — {lr_p*100:.1f}% probability of liver disease")
+            st.error(f"**High Risk** — {lr_p*100:.1f}%")
         else:
-            st.success(f"**Low Risk** — {(1-lr_p)*100:.1f}% probability of healthy function")
+            st.success(f"**Low Risk** — {(1-lr_p)*100:.1f}% healthy")
 
         # Gauge chart
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=lr_p * 100,
-            number=dict(suffix="%", font=dict(size=28, color=TEXT_COLOR)),
+            number=dict(suffix="%", font=dict(size=24, color=TEXT_COLOR)),
             gauge=dict(
-                axis=dict(range=[0, 100], tickfont=dict(size=11, color="#6B7280")),
+                axis=dict(range=[0, 100], tickfont=dict(size=10, color="#6B7280")),
                 bar=dict(color=ACCENT_RED if lr_c == 1 else ACCENT_GREEN, thickness=0.7),
                 bgcolor="rgba(255,255,255,0.04)",
                 borderwidth=0,
@@ -647,44 +733,77 @@ with tab5:
         fig_gauge.update_layout(
             paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
             font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
-            height=220, margin=dict(l=30, r=30, t=20, b=10),
+            height=200, margin=dict(l=20, r=20, t=20, b=10),
         )
         st.plotly_chart(fig_gauge, use_container_width=True)
 
-        with st.expander("Computation Details"):
+        with st.expander("Details"):
             zv = float(np.dot(svec, bundle["logistic_regression"].weights_)[0] + bundle["logistic_regression"].bias_)
-            st.latex(r"z = w^T x + b = " + f"{zv:.4f}")
+            st.latex(r"z = " + f"{zv:.4f}")
             st.latex(r"\hat{{y}} = \sigma({:.4f}) = {:.4f}".format(zv, lr_p))
 
     with r2:
         st.markdown("##### Perceptron")
         if pc == 1:
-            st.error("**High Risk** — Decision boundary classifies as Diseased")
+            st.error("**High Risk** — Class 1")
         else:
-            st.success("**Low Risk** — Decision boundary classifies as Healthy")
+            st.success("**Low Risk** — Class 0")
 
-        # Simple indicator
         fig_perc_ind = go.Figure(go.Indicator(
             mode="number+delta",
             value=ps,
-            number=dict(font=dict(size=36, color=TEXT_COLOR), prefix="z = "),
+            number=dict(font=dict(size=30, color=TEXT_COLOR), prefix="z = "),
             delta=dict(
                 reference=0, increasing=dict(color=ACCENT_RED),
                 decreasing=dict(color=ACCENT_GREEN),
-                font=dict(size=16),
+                font=dict(size=14),
             ),
         ))
         fig_perc_ind.update_layout(
             paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
             font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
-            height=220, margin=dict(l=30, r=30, t=40, b=10),
+            height=200, margin=dict(l=20, r=20, t=30, b=10),
         )
         st.plotly_chart(fig_perc_ind, use_container_width=True)
 
-        with st.expander("Computation Details"):
+        with st.expander("Details"):
             dec = r"\geq 0 \Rightarrow 1" if pc == 1 else r"< 0 \Rightarrow 0"
-            st.latex(r"z = w^T x + b = " + f"{ps:.4f}")
+            st.latex(r"z = " + f"{ps:.4f}")
             st.latex(r"\text{{Step}}({:.4f}) {}".format(ps, dec))
+
+    with r3:
+        st.markdown("##### KNN (k=5)")
+        if knn_c == 1:
+            st.error(f"**High Risk** — {knn_p*100:.0f}% votes")
+        else:
+            st.success(f"**Low Risk** — {(1-knn_p)*100:.0f}% healthy votes")
+
+        fig_knn_gauge = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=knn_p * 100,
+            number=dict(suffix="%", font=dict(size=24, color=TEXT_COLOR)),
+            gauge=dict(
+                axis=dict(range=[0, 100], tickfont=dict(size=10, color="#6B7280")),
+                bar=dict(color=ACCENT_RED if knn_c == 1 else ACCENT_GREEN, thickness=0.7),
+                bgcolor="rgba(255,255,255,0.04)",
+                borderwidth=0,
+                steps=[
+                    dict(range=[0, 50], color="rgba(61,175,107,0.1)"),
+                    dict(range=[50, 100], color="rgba(217,74,74,0.1)"),
+                ],
+                threshold=dict(line=dict(color="#E8EAED", width=2), value=50, thickness=0.8),
+            ),
+        ))
+        fig_knn_gauge.update_layout(
+            paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
+            font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
+            height=200, margin=dict(l=20, r=20, t=20, b=10),
+        )
+        st.plotly_chart(fig_knn_gauge, use_container_width=True)
+
+        with st.expander("Details"):
+            st.markdown(f"**Closest neighbor dist:** `{knn_dists[0, 0]:.3f}`")
+            st.markdown(f"**Votes:** `{int(knn_p * 5)}/5` diseased neighbors")
 
     # Flags
     st.markdown("---")
