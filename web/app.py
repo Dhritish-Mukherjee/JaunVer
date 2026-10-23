@@ -5,6 +5,7 @@ evaluation, and live inference for liver disease classification.
 """
 
 from pathlib import Path
+import base64
 import pickle
 import sys
 
@@ -39,6 +40,16 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+
+@st.cache_data
+def get_image_base64(path_str: str) -> str:
+    """Read an image file and return its base64 data string to preserve native resolution."""
+    p = Path(path_str)
+    if not p.is_file():
+        return ""
+    with open(p, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
 
 # ─── Plotly Theme ──────────────────────────────────────────
 PLOT_BG = "rgba(0,0,0,0)"
@@ -170,12 +181,25 @@ feature_names = prep["feature_names"]
 
 
 # ─── Sidebar ──────────────────────────────────────────────
-if LOGO_PATH.is_file():
-    st.sidebar.image(str(LOGO_PATH), width=85)
-elif ICON_PATH.is_file():
-    st.sidebar.image(str(ICON_PATH), width=75)
-st.sidebar.title("JaunVer")
-st.sidebar.caption("Liver Disease Classification System")
+logo_b64 = get_image_base64(str(LOGO_PATH)) if LOGO_PATH.is_file() else ""
+if logo_b64:
+    st.sidebar.markdown(
+        f"""
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <img src="data:image/png;base64,{logo_b64}" 
+                 alt="JaunVer Logo" 
+                 style="height: 48px; width: auto; max-width: 52px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+            <div>
+                <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: #FFFFFF;">JaunVer</h2>
+                <span style="font-size: 0.78rem; color: #8892A0;">Liver Disease ML</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.sidebar.title("JaunVer")
+    st.sidebar.caption("Liver Disease Classification System")
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     "**Coursework:** B.Tech Project  \n"
@@ -185,20 +209,23 @@ st.sidebar.markdown(
 )
 
 # ─── Header ───────────────────────────────────────────────
-brand_img = LOGO_PATH if LOGO_PATH.is_file() else ICON_PATH
-if brand_img.is_file():
-    h_col1, h_col2 = st.columns([1, 14], vertical_alignment="center")
-    with h_col1:
-        st.image(str(brand_img), width=70)
-    with h_col2:
-        st.markdown("""
-        <div>
-            <h1 style="margin: 0; font-weight: 700; letter-spacing: -0.5px; line-height: 1.1;">JaunVer</h1>
-            <p style="color: #8892A0; font-size: 0.95rem; margin: 4px 0 0 0;">
-                End-to-end liver disease classification pipeline — implemented from scratch in NumPy
-            </p>
+if logo_b64:
+    st.markdown(
+        f"""
+        <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 1.25rem;">
+            <img src="data:image/png;base64,{logo_b64}" 
+                 alt="JaunVer Logo" 
+                 style="height: 68px; width: auto; max-width: 80px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.35));" />
+            <div>
+                <h1 style="margin: 0; font-size: 2.2rem; font-weight: 700; letter-spacing: -0.5px; line-height: 1.15; color: #FFFFFF;">JaunVer</h1>
+                <p style="color: #8892A0; font-size: 0.95rem; margin: 4px 0 0 0;">
+                    End-to-end liver disease classification pipeline — implemented from scratch in NumPy
+                </p>
+            </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True,
+    )
 else:
     st.markdown("""
     <div style="margin-bottom: 1.5rem;">
