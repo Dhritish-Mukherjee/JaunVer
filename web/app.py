@@ -538,8 +538,11 @@ with tab3:
         st.markdown("---")
 
         # Test distance distribution
-        k_dists, _ = knn_model.kneighbors(X_test)
-        avg_5th_dists = k_dists[:, -1]
+        @st.cache_data
+        def _get_avg_5th_dists():
+            return knn_model.kneighbors(X_test)[0][:, -1]
+
+        avg_5th_dists = _get_avg_5th_dists()
 
         fig_knn_dist = go.Figure()
         fig_knn_dist.add_trace(go.Histogram(
@@ -576,17 +579,27 @@ with tab4:
     st.caption(f"Test set: {len(y_test)} patients")
     st.markdown("")
 
-    lr_preds = lr_model.predict(X_test)
-    perc_preds = perc_model.predict(X_test)
-    knn_preds = knn_model.predict(X_test)
+    @st.cache_data
+    def _get_evaluation_results():
+        lr_p = lr_model.predict(X_test)
+        perc_p = perc_model.predict(X_test)
+        knn_p = knn_model.predict(X_test)
+        return {
+            "lr_rep": classification_report(y_test, lr_p),
+            "perc_rep": classification_report(y_test, perc_p),
+            "knn_rep": classification_report(y_test, knn_p),
+            "cm_lr": confusion_matrix(y_test, lr_p),
+            "cm_perc": confusion_matrix(y_test, perc_p),
+            "cm_knn": confusion_matrix(y_test, knn_p),
+        }
 
-    lr_rep = classification_report(y_test, lr_preds)
-    perc_rep = classification_report(y_test, perc_preds)
-    knn_rep = classification_report(y_test, knn_preds)
-
-    cm_lr = confusion_matrix(y_test, lr_preds)
-    cm_perc = confusion_matrix(y_test, perc_preds)
-    cm_knn = confusion_matrix(y_test, knn_preds)
+    eval_res = _get_evaluation_results()
+    lr_rep = eval_res["lr_rep"]
+    perc_rep = eval_res["perc_rep"]
+    knn_rep = eval_res["knn_rep"]
+    cm_lr = eval_res["cm_lr"]
+    cm_perc = eval_res["cm_perc"]
+    cm_knn = eval_res["cm_knn"]
 
     cm1, cm2, cm3 = st.columns(3, gap="medium")
 
@@ -735,167 +748,220 @@ with tab5:
         ),
     }
 
-    sel = st.selectbox("Load Preset", list(PRESETS.keys()))
-    d = PRESETS[sel] or dict(
+    DEFAULT_PROFILE = dict(
         age=45, gender="Male", total_bilirubin=1.0, direct_bilirubin=0.3,
         alkaline_phosphotase=180, alamine_aminotransferase=25,
         aspartate_aminotransferase=30, total_proteins=7.0, albumin=3.5,
         albumin_and_globulin_ratio=1.0,
     )
 
-    st.markdown("---")
-    ic1, ic2, ic3 = st.columns(3, gap="large")
+    for k, v in DEFAULT_PROFILE.items():
+        if f"p_{k}" not in st.session_state:
+            st.session_state[f"p_{k}"] = v
 
-    with ic1:
-        st.markdown("##### Demographics & Bilirubin")
-        age = st.number_input("Age", 1, 100, int(d["age"]), key="p_age")
-        gender = st.selectbox("Gender", ["Male", "Female"], index=0 if d["gender"] == "Male" else 1, key="p_gen")
-        tb = st.number_input("Total Bilirubin (mg/dL)", 0.1, 75.0, float(d["total_bilirubin"]), 0.1, key="p_tb", help="Ref: 0.1–1.2")
-        db = st.number_input("Direct Bilirubin (mg/dL)", 0.0, 30.0, float(d["direct_bilirubin"]), 0.1, key="p_db", help="Ref: 0.0–0.3")
+    def on_preset_change():
+        choice = st.session_state.get("preset_selection", "Custom")
+        preset_vals = PRESETS.get(choice)
+        if preset_vals is not None:
+            for pk, pv in preset_vals.items():
+                st.session_state[f"p_{pk}"] = pv
+            st.session_state["preset_just_applied"] = True
 
-    with ic2:
-        st.markdown("##### Hepatic Enzymes")
-        alp = st.number_input("ALP (IU/L)", 10, 2500, int(d["alkaline_phosphotase"]), 5, key="p_alp", help="Ref: 44–147")
-        alt = st.number_input("ALT / SGPT (IU/L)", 5, 2000, int(d["alamine_aminotransferase"]), 2, key="p_alt", help="Ref: 7–56")
-        ast = st.number_input("AST / SGOT (IU/L)", 5, 2500, int(d["aspartate_aminotransferase"]), 2, key="p_ast", help="Ref: 10–40")
-
-    with ic3:
-        st.markdown("##### Serum Proteins")
-        tp = st.number_input("Total Proteins (g/dL)", 1.0, 15.0, float(d["total_proteins"]), 0.1, key="p_tp", help="Ref: 6.0–8.3")
-        ab = st.number_input("Albumin (g/dL)", 0.5, 10.0, float(d["albumin"]), 0.1, key="p_ab", help="Ref: 3.4–5.4")
-        ag = st.number_input("A/G Ratio", 0.1, 5.0, float(d["albumin_and_globulin_ratio"]), 0.05, key="p_ag", help="Ref: 0.8–2.0")
-
-    gn = 1 if gender == "Male" else 0
-    vec = np.array([[age, gn, tb, db, alp, alt, ast, tp, ab, ag]], dtype=np.float64)
-    svec = bundle["scaler"].transform(vec)
-
-    lr_p = float(bundle["logistic_regression"].predict_proba(svec)[0])
-    lr_c = int(lr_p >= 0.5)
-    ps = float(bundle["perceptron"].decision_function(svec)[0])
-    pc = 1 if ps >= 0 else 0
-    knn_p = float(bundle["knn"].predict_proba(svec)[0])
-    knn_c = int(knn_p >= 0.5)
-    knn_dists, knn_idx = bundle["knn"].kneighbors(svec)
+    st.selectbox("Load Preset", list(PRESETS.keys()), key="preset_selection", on_change=on_preset_change)
 
     st.markdown("---")
-    r1, r2, r3 = st.columns(3, gap="medium")
 
-    with r1:
-        st.markdown("##### Logistic Regression")
-        if lr_c == 1:
-            st.error(f"**High Risk** — {lr_p*100:.1f}%")
-        else:
-            st.success(f"**Low Risk** — {(1-lr_p)*100:.1f}% healthy")
+    with st.form("risk_prediction_form", border=False):
+        ic1, ic2, ic3 = st.columns(3, gap="large")
 
-        # Gauge chart
-        fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=lr_p * 100,
-            number=dict(suffix="%", font=dict(size=24, color=TEXT_COLOR)),
-            gauge=dict(
-                axis=dict(range=[0, 100], tickfont=dict(size=10, color="#6B7280")),
-                bar=dict(color=ACCENT_RED if lr_c == 1 else ACCENT_GREEN, thickness=0.7),
-                bgcolor="rgba(255,255,255,0.04)",
-                borderwidth=0,
-                steps=[
-                    dict(range=[0, 50], color="rgba(61,175,107,0.1)"),
-                    dict(range=[50, 100], color="rgba(217,74,74,0.1)"),
-                ],
-                threshold=dict(line=dict(color="#E8EAED", width=2), value=50, thickness=0.8),
-            ),
-        ))
-        fig_gauge.update_layout(
-            paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
-            font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
-            height=200, margin=dict(l=20, r=20, t=20, b=10),
-        )
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        with ic1:
+            st.markdown("##### Demographics & Bilirubin")
+            age = st.number_input("Age", 1, 100, key="p_age")
+            gender = st.selectbox("Gender", ["Male", "Female"], key="p_gender")
+            tb = st.number_input("Total Bilirubin (mg/dL)", 0.1, 75.0, step=0.1, key="p_total_bilirubin", help="Ref: 0.1–1.2")
+            db = st.number_input("Direct Bilirubin (mg/dL)", 0.0, 30.0, step=0.1, key="p_direct_bilirubin", help="Ref: 0.0–0.3")
 
-        with st.expander("Details"):
-            zv = float(np.dot(svec, bundle["logistic_regression"].weights_)[0] + bundle["logistic_regression"].bias_)
-            st.latex(r"z = " + f"{zv:.4f}")
-            st.latex(r"\hat{{y}} = \sigma({:.4f}) = {:.4f}".format(zv, lr_p))
+        with ic2:
+            st.markdown("##### Hepatic Enzymes")
+            alp = st.number_input("ALP (IU/L)", 10, 2500, step=5, key="p_alkaline_phosphotase", help="Ref: 44–147")
+            alt = st.number_input("ALT / SGPT (IU/L)", 5, 2000, step=2, key="p_alamine_aminotransferase", help="Ref: 7–56")
+            ast = st.number_input("AST / SGOT (IU/L)", 5, 2500, step=2, key="p_aspartate_aminotransferase", help="Ref: 10–40")
 
-    with r2:
-        st.markdown("##### Perceptron")
-        if pc == 1:
-            st.error("**High Risk** — Class 1")
-        else:
-            st.success("**Low Risk** — Class 0")
+        with ic3:
+            st.markdown("##### Serum Proteins")
+            tp = st.number_input("Total Proteins (g/dL)", 1.0, 15.0, step=0.1, key="p_total_proteins", help="Ref: 6.0–8.3")
+            ab = st.number_input("Albumin (g/dL)", 0.5, 10.0, step=0.1, key="p_albumin", help="Ref: 3.4–5.4")
+            ag = st.number_input("A/G Ratio", 0.1, 5.0, step=0.05, key="p_albumin_and_globulin_ratio", help="Ref: 0.8–2.0")
 
-        fig_perc_ind = go.Figure(go.Indicator(
-            mode="number+delta",
-            value=ps,
-            number=dict(font=dict(size=30, color=TEXT_COLOR), prefix="z = "),
-            delta=dict(
-                reference=0, increasing=dict(color=ACCENT_RED),
-                decreasing=dict(color=ACCENT_GREEN),
-                font=dict(size=14),
-            ),
-        ))
-        fig_perc_ind.update_layout(
-            paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
-            font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
-            height=200, margin=dict(l=20, r=20, t=30, b=10),
-        )
-        st.plotly_chart(fig_perc_ind, use_container_width=True)
+        st.markdown("<div style='margin-top: 0.75rem;'></div>", unsafe_allow_html=True)
+        submitted = st.form_submit_button("Run Patient Risk Assessment", type="primary", use_container_width=True)
 
-        with st.expander("Details"):
-            dec = r"\geq 0 \Rightarrow 1" if pc == 1 else r"< 0 \Rightarrow 0"
-            st.latex(r"z = " + f"{ps:.4f}")
-            st.latex(r"\text{{Step}}({:.4f}) {}".format(ps, dec))
+    should_compute = (
+        submitted
+        or st.session_state.get("preset_just_applied", False)
+        or ("last_prediction" not in st.session_state)
+    )
 
-    with r3:
-        st.markdown("##### KNN (k=5)")
-        if knn_c == 1:
-            st.error(f"**High Risk** — {knn_p*100:.0f}% votes")
-        else:
-            st.success(f"**Low Risk** — {(1-knn_p)*100:.0f}% healthy votes")
+    if st.session_state.get("preset_just_applied", False):
+        st.session_state["preset_just_applied"] = False
 
-        fig_knn_gauge = go.Figure(go.Indicator(
-            mode="gauge+number",
-            value=knn_p * 100,
-            number=dict(suffix="%", font=dict(size=24, color=TEXT_COLOR)),
-            gauge=dict(
-                axis=dict(range=[0, 100], tickfont=dict(size=10, color="#6B7280")),
-                bar=dict(color=ACCENT_RED if knn_c == 1 else ACCENT_GREEN, thickness=0.7),
-                bgcolor="rgba(255,255,255,0.04)",
-                borderwidth=0,
-                steps=[
-                    dict(range=[0, 50], color="rgba(61,175,107,0.1)"),
-                    dict(range=[50, 100], color="rgba(217,74,74,0.1)"),
-                ],
-                threshold=dict(line=dict(color="#E8EAED", width=2), value=50, thickness=0.8),
-            ),
-        ))
-        fig_knn_gauge.update_layout(
-            paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
-            font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
-            height=200, margin=dict(l=20, r=20, t=20, b=10),
-        )
-        st.plotly_chart(fig_knn_gauge, use_container_width=True)
+    results_placeholder = st.empty()
 
-        with st.expander("Details"):
-            st.markdown(f"**Closest neighbor dist:** `{knn_dists[0, 0]:.3f}`")
-            st.markdown(f"**Votes:** `{int(knn_p * 5)}/5` diseased neighbors")
+    if should_compute:
+        with st.spinner("Analyzing patient biomarkers across models..."):
+            gn = 1 if gender == "Male" else 0
+            vec = np.array([[age, gn, tb, db, alp, alt, ast, tp, ab, ag]], dtype=np.float64)
+            svec = bundle["scaler"].transform(vec)
 
-    # Flags
-    st.markdown("---")
-    st.markdown("##### Biomarker Reference Check")
-    flags = []
-    if tb > 1.2: flags.append(("Total Bilirubin", f"{tb:.1f}", "0.1–1.2", "Elevated"))
-    if db > 0.3: flags.append(("Direct Bilirubin", f"{db:.1f}", "0.0–0.3", "Elevated"))
-    if alp > 147: flags.append(("ALP", f"{alp}", "44–147", "Elevated"))
-    if alt > 56: flags.append(("ALT", f"{alt}", "7–56", "Elevated"))
-    if ast > 40: flags.append(("AST", f"{ast}", "10–40", "Elevated"))
-    if ab < 3.4: flags.append(("Albumin", f"{ab:.1f}", "3.4–5.4", "Low"))
-    if ag < 0.8: flags.append(("A/G Ratio", f"{ag:.2f}", "0.8–2.0", "Low"))
+            lr_p = float(bundle["logistic_regression"].predict_proba(svec)[0])
+            lr_c = int(lr_p >= 0.5)
+            ps = float(bundle["perceptron"].decision_function(svec)[0])
+            pc = 1 if ps >= 0 else 0
+            knn_p = float(bundle["knn"].predict_proba(svec)[0])
+            knn_c = int(knn_p >= 0.5)
+            knn_dists, knn_idx = bundle["knn"].kneighbors(svec)
 
-    if flags:
-        st.warning(f"{len(flags)} biomarker(s) outside reference range:")
-        st.table(pd.DataFrame(flags, columns=["Biomarker", "Value", "Reference", "Status"]))
-    else:
-        st.success("All biomarkers within reference intervals.")
+            st.session_state["last_prediction"] = {
+                "lr_p": lr_p,
+                "lr_c": lr_c,
+                "ps": ps,
+                "pc": pc,
+                "knn_p": knn_p,
+                "knn_c": knn_c,
+                "knn_dists": knn_dists,
+                "svec": svec,
+                "tb": tb,
+                "db": db,
+                "alp": alp,
+                "alt": alt,
+                "ast": ast,
+                "tp": tp,
+                "ab": ab,
+                "ag": ag,
+            }
+
+    res = st.session_state.get("last_prediction")
+    if res is not None:
+        with results_placeholder.container():
+            st.markdown("---")
+            r1, r2, r3 = st.columns(3, gap="medium")
+
+            with r1:
+                st.markdown("##### Logistic Regression")
+                if res["lr_c"] == 1:
+                    st.error(f"**High Risk** — {res['lr_p']*100:.1f}%")
+                else:
+                    st.success(f"**Low Risk** — {(1-res['lr_p'])*100:.1f}% healthy")
+
+                # Gauge chart
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=res["lr_p"] * 100,
+                    number=dict(suffix="%", font=dict(size=24, color=TEXT_COLOR)),
+                    gauge=dict(
+                        axis=dict(range=[0, 100], tickfont=dict(size=10, color="#6B7280")),
+                        bar=dict(color=ACCENT_RED if res["lr_c"] == 1 else ACCENT_GREEN, thickness=0.7),
+                        bgcolor="rgba(255,255,255,0.04)",
+                        borderwidth=0,
+                        steps=[
+                            dict(range=[0, 50], color="rgba(61,175,107,0.1)"),
+                            dict(range=[50, 100], color="rgba(217,74,74,0.1)"),
+                        ],
+                        threshold=dict(line=dict(color="#E8EAED", width=2), value=50, thickness=0.8),
+                    ),
+                ))
+                fig_gauge.update_layout(
+                    paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
+                    font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
+                    height=200, margin=dict(l=20, r=20, t=20, b=10),
+                )
+                st.plotly_chart(fig_gauge, use_container_width=True)
+
+                with st.expander("Details"):
+                    zv = float(np.dot(res["svec"], bundle["logistic_regression"].weights_)[0] + bundle["logistic_regression"].bias_)
+                    st.latex(r"z = " + f"{zv:.4f}")
+                    st.latex(r"\hat{{y}} = \sigma({:.4f}) = {:.4f}".format(zv, res["lr_p"]))
+
+            with r2:
+                st.markdown("##### Perceptron")
+                if res["pc"] == 1:
+                    st.error("**High Risk** — Class 1")
+                else:
+                    st.success("**Low Risk** — Class 0")
+
+                fig_perc_ind = go.Figure(go.Indicator(
+                    mode="number+delta",
+                    value=res["ps"],
+                    number=dict(font=dict(size=30, color=TEXT_COLOR), prefix="z = "),
+                    delta=dict(
+                        reference=0, increasing=dict(color=ACCENT_RED),
+                        decreasing=dict(color=ACCENT_GREEN),
+                        font=dict(size=14),
+                    ),
+                ))
+                fig_perc_ind.update_layout(
+                    paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
+                    font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
+                    height=200, margin=dict(l=20, r=20, t=30, b=10),
+                )
+                st.plotly_chart(fig_perc_ind, use_container_width=True)
+
+                with st.expander("Details"):
+                    dec = r"\geq 0 \Rightarrow 1" if res["pc"] == 1 else r"< 0 \Rightarrow 0"
+                    st.latex(r"z = " + f"{res['ps']:.4f}")
+                    st.latex(r"\text{{Step}}({:.4f}) {}".format(res["ps"], dec))
+
+            with r3:
+                st.markdown("##### KNN (k=5)")
+                if res["knn_c"] == 1:
+                    st.error(f"**High Risk** — {res['knn_p']*100:.0f}% votes")
+                else:
+                    st.success(f"**Low Risk** — {(1-res['knn_p'])*100:.0f}% healthy votes")
+
+                fig_knn_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=res["knn_p"] * 100,
+                    number=dict(suffix="%", font=dict(size=24, color=TEXT_COLOR)),
+                    gauge=dict(
+                        axis=dict(range=[0, 100], tickfont=dict(size=10, color="#6B7280")),
+                        bar=dict(color=ACCENT_RED if res["knn_c"] == 1 else ACCENT_GREEN, thickness=0.7),
+                        bgcolor="rgba(255,255,255,0.04)",
+                        borderwidth=0,
+                        steps=[
+                            dict(range=[0, 50], color="rgba(61,175,107,0.1)"),
+                            dict(range=[50, 100], color="rgba(217,74,74,0.1)"),
+                        ],
+                        threshold=dict(line=dict(color="#E8EAED", width=2), value=50, thickness=0.8),
+                    ),
+                ))
+                fig_knn_gauge.update_layout(
+                    paper_bgcolor=PAPER_BG, plot_bgcolor=PLOT_BG,
+                    font=dict(family=FONT_FAMILY, color=TEXT_COLOR),
+                    height=200, margin=dict(l=20, r=20, t=20, b=10),
+                )
+                st.plotly_chart(fig_knn_gauge, use_container_width=True)
+
+                with st.expander("Details"):
+                    st.markdown(f"**Closest neighbor dist:** `{res['knn_dists'][0, 0]:.3f}`")
+                    st.markdown(f"**Votes:** `{int(res['knn_p'] * 5)}/5` diseased neighbors")
+
+            # Flags
+            st.markdown("---")
+            st.markdown("##### Biomarker Reference Check")
+            flags = []
+            if res["tb"] > 1.2: flags.append(("Total Bilirubin", f"{res['tb']:.1f}", "0.1–1.2", "Elevated"))
+            if res["db"] > 0.3: flags.append(("Direct Bilirubin", f"{res['db']:.1f}", "0.0–0.3", "Elevated"))
+            if res["alp"] > 147: flags.append(("ALP", f"{res['alp']}", "44–147", "Elevated"))
+            if res["alt"] > 56: flags.append(("ALT", f"{res['alt']}", "7–56", "Elevated"))
+            if res["ast"] > 40: flags.append(("AST", f"{res['ast']}", "10–40", "Elevated"))
+            if res["ab"] < 3.4: flags.append(("Albumin", f"{res['ab']:.1f}", "3.4–5.4", "Low"))
+            if res["ag"] < 0.8: flags.append(("A/G Ratio", f"{res['ag']:.2f}", "0.8–2.0", "Low"))
+
+            if flags:
+                st.warning(f"{len(flags)} biomarker(s) outside reference range:")
+                st.table(pd.DataFrame(flags, columns=["Biomarker", "Value", "Reference", "Status"]))
+            else:
+                st.success("All biomarkers within reference intervals.")
 
 
 # ─── Footer ───────────────────────────────────────────────

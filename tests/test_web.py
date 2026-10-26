@@ -33,3 +33,17 @@ def test_model_bundle_exists_and_predicts():
 
     knn_pred = bundle["knn"].predict(scaled_sample)[0]
     assert knn_pred in (0, 1)
+
+
+def test_streamlit_app_form_submission():
+    """Verify that the Streamlit dashboard initializes and handles form submission cleanly."""
+    from streamlit.testing.v1 import AppTest
+
+    app_path = Path(__file__).resolve().parent.parent / "web" / "app.py"
+    at = AppTest.from_file(str(app_path), default_timeout=30)
+    at.run()
+    assert not at.exception, f"App execution failed on load: {at.exception}"
+
+    # Click the prediction submit button
+    at.button[0].click().run()
+    assert not at.exception, f"App execution failed on form submit: {at.exception}"
