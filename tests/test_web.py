@@ -36,7 +36,7 @@ def test_model_bundle_exists_and_predicts():
 
 
 def test_streamlit_app_form_submission():
-    """Verify that the Streamlit dashboard initializes and handles form submission cleanly."""
+    """Verify that the Streamlit dashboard initializes, decouples presets, and handles form submission cleanly."""
     from streamlit.testing.v1 import AppTest
 
     app_path = Path(__file__).resolve().parent.parent / "web" / "app.py"
@@ -44,6 +44,19 @@ def test_streamlit_app_form_submission():
     at.run()
     assert not at.exception, f"App execution failed on load: {at.exception}"
 
+    # Verify initial state requires user to click Run
+    assert at.session_state["last_prediction"] is None
+
+    # Select a preset
+    at.selectbox[0].select("Acute Liver Injury").run()
+    assert not at.exception, f"App failed on preset select: {at.exception}"
+    # Preset selection must NOT automatically run prediction
+    assert at.session_state["last_prediction"] is None
+    # Preset must have populated form inputs (Age: 62)
+    assert at.session_state["p_age"] == 62
+
     # Click the prediction submit button
     at.button[0].click().run()
     assert not at.exception, f"App execution failed on form submit: {at.exception}"
+    # Now prediction must be populated
+    assert at.session_state["last_prediction"] is not None

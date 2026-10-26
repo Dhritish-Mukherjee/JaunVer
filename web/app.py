@@ -8,6 +8,7 @@ from pathlib import Path
 import base64
 import pickle
 import sys
+import time
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -759,13 +760,18 @@ with tab5:
         if f"p_{k}" not in st.session_state:
             st.session_state[f"p_{k}"] = v
 
+    if "last_prediction" not in st.session_state:
+        st.session_state["last_prediction"] = None
+
     def on_preset_change():
         choice = st.session_state.get("preset_selection", "Custom")
         preset_vals = PRESETS.get(choice)
         if preset_vals is not None:
             for pk, pv in preset_vals.items():
                 st.session_state[f"p_{pk}"] = pv
-            st.session_state["preset_just_applied"] = True
+        # Decouple preset from automatic execution: clear previous result & set pending notice
+        st.session_state["last_prediction"] = None
+        st.session_state["pending_preset"] = choice
 
     st.selectbox("Load Preset", list(PRESETS.keys()), key="preset_selection", on_change=on_preset_change)
 
@@ -796,19 +802,11 @@ with tab5:
         st.markdown("<div style='margin-top: 0.75rem;'></div>", unsafe_allow_html=True)
         submitted = st.form_submit_button("Run Patient Risk Assessment", type="primary", use_container_width=True)
 
-    should_compute = (
-        submitted
-        or st.session_state.get("preset_just_applied", False)
-        or ("last_prediction" not in st.session_state)
-    )
-
-    if st.session_state.get("preset_just_applied", False):
-        st.session_state["preset_just_applied"] = False
-
     results_placeholder = st.empty()
 
-    if should_compute:
+    if submitted:
         with st.spinner("Analyzing patient biomarkers across models..."):
+            time.sleep(0.5)  # Perceptible loading feedback for multi-model inference
             gn = 1 if gender == "Male" else 0
             vec = np.array([[age, gn, tb, db, alp, alt, ast, tp, ab, ag]], dtype=np.float64)
             svec = bundle["scaler"].transform(vec)
@@ -839,6 +837,7 @@ with tab5:
                 "ab": ab,
                 "ag": ag,
             }
+            st.session_state["pending_preset"] = None
 
     res = st.session_state.get("last_prediction")
     if res is not None:
@@ -962,6 +961,14 @@ with tab5:
                 st.table(pd.DataFrame(flags, columns=["Biomarker", "Value", "Reference", "Status"]))
             else:
                 st.success("All biomarkers within reference intervals.")
+    else:
+        with results_placeholder.container():
+            st.markdown("---")
+            pending = st.session_state.get("pending_preset")
+            if pending and pending != "Custom":
+                st.info(f"**{pending}** profile loaded into the form. Click **Run Patient Risk Assessment** to evaluate.")
+            else:
+                st.info("Adjust the patient biomarkers above or choose a preset, then click **Run Patient Risk Assessment** to generate predictions.")
 
 
 # ─── Footer ───────────────────────────────────────────────
