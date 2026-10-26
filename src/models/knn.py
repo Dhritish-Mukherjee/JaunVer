@@ -67,18 +67,8 @@ class KNearestNeighbors:
     def _compute_pairwise_distances(self, X: np.ndarray) -> np.ndarray:
         """Compute Euclidean distances between query samples and all training points.
 
-        Formula for distance between query x_i and training sample t_j:
-            d(x_i, t_j) = sqrt( sum_{k=1}^d (x_{i,k} - t_{j,k})^2 )
-
-        Parameters
-        ----------
-        X : np.ndarray of shape (n_queries, d)
-            Query feature matrix.
-
-        Returns
-        -------
-        np.ndarray of shape (n_queries, n_train)
-            Distance matrix where entry (i, j) is the distance from query i to training sample j.
+        Formula for distance between query x and training sample t:
+            d(x, t) = sqrt( sum_{j=1}^d (x_j - t_j)^2 )
         """
         if self.X_train_ is None:
             raise RuntimeError("Classifier is not fitted. Call fit() before predicting.")
@@ -87,35 +77,22 @@ class KNearestNeighbors:
         if X_queries.ndim == 1:
             X_queries = X_queries.reshape(1, -1)
 
-        # Vectorized Euclidean distance calculation using broadcasting:
-        # X_queries[:, np.newaxis, :] has shape (n_queries, 1, d)
-        # self.X_train_[np.newaxis, :, :] has shape (1, n_train, d)
-        # diff has shape (n_queries, n_train, d)
-        diff = X_queries[:, np.newaxis, :] - self.X_train_[np.newaxis, :, :]
-        distances = np.sqrt(np.sum(diff ** 2, axis=2))
-        return distances
+        # Compute Euclidean distance from each query sample to all training samples
+        distances = [
+            np.sqrt(np.sum((self.X_train_ - q) ** 2, axis=1))
+            for q in X_queries
+        ]
+        return np.array(distances)
 
     def kneighbors(
         self, X: np.ndarray
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Find the K-neighbors of query points.
-
-        Parameters
-        ----------
-        X : np.ndarray of shape (n_queries, d)
-            Query points.
-
-        Returns
-        -------
-        distances : np.ndarray of shape (n_queries, n_neighbors)
-            Distances to the k-nearest points.
-        indices : np.ndarray of shape (n_queries, n_neighbors)
-            Indices of the k-nearest points in the training matrix.
-        """
+        """Find the k-nearest neighbors of query points."""
         distances = self._compute_pairwise_distances(X)
-        sorted_indices = np.argsort(distances, axis=1)
-        k_indices = sorted_indices[:, : self.n_neighbors]
-        k_distances = np.take_along_axis(distances, k_indices, axis=1)
+        # 1. Indices of the k nearest neighbors
+        k_indices = np.argsort(distances, axis=1)[:, : self.n_neighbors]
+        # 2. Sorted distance values to those k neighbors
+        k_distances = np.sort(distances, axis=1)[:, : self.n_neighbors]
         return k_distances, k_indices
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

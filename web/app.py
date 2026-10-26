@@ -779,14 +779,7 @@ with tab5:
         }
 
     if "last_prediction" not in st.session_state:
-        init_gn = 1 if st.session_state["p_gender"] == "Male" else 0
-        st.session_state["last_prediction"] = compute_risk(
-            st.session_state["p_age"], init_gn,
-            st.session_state["p_total_bilirubin"], st.session_state["p_direct_bilirubin"],
-            st.session_state["p_alkaline_phosphotase"], st.session_state["p_alamine_aminotransferase"],
-            st.session_state["p_aspartate_aminotransferase"], st.session_state["p_total_proteins"],
-            st.session_state["p_albumin"], st.session_state["p_albumin_and_globulin_ratio"],
-        )
+        st.session_state["last_prediction"] = None
 
     def on_preset_change():
         choice = st.session_state.get("preset_selection", "Custom")
@@ -794,9 +787,8 @@ with tab5:
         if preset_vals is not None:
             for pk, pv in preset_vals.items():
                 st.session_state[f"p_{pk}"] = pv
-        # Existing prediction stays intact until user clicks Predict button
 
-    st.selectbox("Load Preset", list(PRESETS.keys()), key="preset_selection", on_change=on_preset_change)
+    st.selectbox("Load Preset", list(PRESETS.keys()), key="preset_selection", on_change=on_preset_change, filter_mode=None)
 
     st.markdown("---")
 
@@ -828,12 +820,10 @@ with tab5:
     results_placeholder = st.empty()
 
     if submitted:
-        with st.spinner("Analyzing patient biomarkers across models..."):
-            time.sleep(0.5)  # Visible loading feedback for multi-model inference
-            gn = 1 if gender == "Male" else 0
-            st.session_state["last_prediction"] = compute_risk(
-                age, gn, tb, db, alp, alt, ast, tp, ab, ag
-            )
+        gn = 1 if gender == "Male" else 0
+        st.session_state["last_prediction"] = compute_risk(
+            age, gn, tb, db, alp, alt, ast, tp, ab, ag
+        )
 
     res = st.session_state.get("last_prediction")
     if res is not None:
@@ -957,6 +947,10 @@ with tab5:
                 st.table(pd.DataFrame(flags, columns=["Biomarker", "Value", "Reference", "Status"]))
             else:
                 st.success("All biomarkers within reference intervals.")
+    else:
+        with results_placeholder.container():
+            st.markdown("---")
+            st.info("Select a preset or enter patient biomarker values above, then click **Run Patient Risk Assessment**.")
 
 
 # ─── Footer ───────────────────────────────────────────────
