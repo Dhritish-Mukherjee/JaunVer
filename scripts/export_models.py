@@ -29,7 +29,7 @@ CLINICAL_REFERENCE_RANGES = {
     "alkaline_phosphotase": {"min": 44.0, "max": 147.0, "unit": "IU/L"},
     "alamine_aminotransferase": {"min": 7.0, "max": 56.0, "unit": "IU/L"},
     "aspartate_aminotransferase": {"min": 10.0, "max": 40.0, "unit": "IU/L"},
-    "total_proteins": {"min": 6.0, "max": 8.3, "g/dL": "g/dL"},
+    "total_proteins": {"min": 6.0, "max": 8.3, "unit": "g/dL"},
     "albumin": {"min": 3.4, "max": 5.4, "unit": "g/dL"},
     "albumin_and_globulin_ratio": {"min": 0.8, "max": 2.0, "unit": "ratio"},
 }
