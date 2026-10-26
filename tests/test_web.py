@@ -36,7 +36,7 @@ def test_model_bundle_exists_and_predicts():
 
 
 def test_streamlit_app_form_submission():
-    """Verify that the Streamlit dashboard initializes, decouples presets, and handles form submission cleanly."""
+    """Verify that dashboard initializes prediction, preserves it on preset switch, and updates on submit."""
     from streamlit.testing.v1 import AppTest
 
     app_path = Path(__file__).resolve().parent.parent / "web" / "app.py"
@@ -44,19 +44,29 @@ def test_streamlit_app_form_submission():
     at.run()
     assert not at.exception, f"App execution failed on load: {at.exception}"
 
-    # Verify initial state requires user to click Run
-    assert at.session_state["last_prediction"] is None
+    # Initial baseline prediction is present
+    init_pred = at.session_state["last_prediction"]
+    assert init_pred is not None
 
-    # Select a preset
+    # Select preset: Acute Liver Injury
     at.selectbox[0].select("Acute Liver Injury").run()
     assert not at.exception, f"App failed on preset select: {at.exception}"
-    # Preset selection must NOT automatically run prediction
-    assert at.session_state["last_prediction"] is None
-    # Preset must have populated form inputs (Age: 62)
     assert at.session_state["p_age"] == 62
+    # Crucial: Old prediction STAYS intact
+    assert at.session_state["last_prediction"] == init_pred
+
+    # Select preset: Healthy Profile
+    at.selectbox[0].select("Healthy Profile").run()
+    assert not at.exception, f"App failed on preset select: {at.exception}"
+    assert at.session_state["p_age"] == 32
+    # Crucial: Old prediction STILL stays intact
+    assert at.session_state["last_prediction"] == init_pred
 
     # Click the prediction submit button
     at.button[0].click().run()
     assert not at.exception, f"App execution failed on form submit: {at.exception}"
-    # Now prediction must be populated
-    assert at.session_state["last_prediction"] is not None
+    new_pred = at.session_state["last_prediction"]
+    # New prediction replaces old prediction for Healthy Profile
+    assert new_pred is not None
+    assert new_pred != init_pred
+    assert new_pred["lr_c"] == 0  # Healthy Profile classified as low risk

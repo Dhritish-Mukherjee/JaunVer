@@ -33,7 +33,8 @@ from src.preprocessing.pipeline import clean_and_preprocess_data
 
 # ─── Page Setup ────────────────────────────────────────────
 ICON_PATH = REPO_ROOT / "assets" / "jaunver_icon.svg"
-LOGO_PATH = REPO_ROOT / "assets" / "jaunver.png"
+WEB_LOGO = REPO_ROOT / "assets" / "jaunver_web.png"
+LOGO_PATH = WEB_LOGO if WEB_LOGO.is_file() else (REPO_ROOT / "assets" / "jaunver.png")
 
 st.set_page_config(
     page_title="JaunVer",
@@ -61,7 +62,7 @@ ACCENT_BLUE = "#4A90D9"
 ACCENT_ORANGE = "#E6863A"
 ACCENT_RED = "#D94A4A"
 ACCENT_GREEN = "#3DAF6B"
-FONT_FAMILY = "Inter, -apple-system, system-ui, sans-serif"
+FONT_FAMILY = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
 
 def plotly_layout(**overrides):
@@ -82,10 +83,8 @@ def plotly_layout(**overrides):
 # ─── Custom CSS ────────────────────────────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
     html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, system-ui, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     .block-container { padding-top: 2rem; max-width: 1200px; }
 
@@ -160,22 +159,12 @@ def load_bundle():
     return bundle
 
 
-@st.cache_resource
-def train_models_for_display():
-    prep = get_preprocessed()
-    lr = LogisticRegression(learning_rate=0.1, n_iterations=1000, random_state=42)
-    lr.fit(prep["X_train"], prep["y_train"])
-    perc = Perceptron(learning_rate=0.01, n_iterations=100, random_state=42)
-    perc.fit(prep["X_train"], prep["y_train"])
-    knn = KNearestNeighbors(n_neighbors=5)
-    knn.fit(prep["X_train"], prep["y_train"])
-    return lr, perc, knn
-
-
 raw_df = get_raw_data()
 prep = get_preprocessed()
 bundle = load_bundle()
-lr_model, perc_model, knn_model = train_models_for_display()
+lr_model = bundle["logistic_regression"]
+perc_model = bundle["perceptron"]
+knn_model = bundle["knn"]
 X_train, X_test = prep["X_train"], prep["X_test"]
 y_train, y_test = prep["y_train"], prep["y_test"]
 feature_names = prep["feature_names"]
@@ -760,8 +749,44 @@ with tab5:
         if f"p_{k}" not in st.session_state:
             st.session_state[f"p_{k}"] = v
 
+    def compute_risk(p_age, p_gn, p_tb, p_db, p_alp, p_alt, p_ast, p_tp, p_ab, p_ag):
+        vec = np.array([[p_age, p_gn, p_tb, p_db, p_alp, p_alt, p_ast, p_tp, p_ab, p_ag]], dtype=np.float64)
+        svec = bundle["scaler"].transform(vec)
+        lr_p = float(bundle["logistic_regression"].predict_proba(svec)[0])
+        lr_c = int(lr_p >= 0.5)
+        ps = float(bundle["perceptron"].decision_function(svec)[0])
+        pc = 1 if ps >= 0 else 0
+        knn_p = float(bundle["knn"].predict_proba(svec)[0])
+        knn_c = int(knn_p >= 0.5)
+        knn_dists, knn_idx = bundle["knn"].kneighbors(svec)
+        return {
+            "lr_p": lr_p,
+            "lr_c": lr_c,
+            "ps": ps,
+            "pc": pc,
+            "knn_p": knn_p,
+            "knn_c": knn_c,
+            "knn_dists": knn_dists,
+            "svec": svec,
+            "tb": p_tb,
+            "db": p_db,
+            "alp": p_alp,
+            "alt": p_alt,
+            "ast": p_ast,
+            "tp": p_tp,
+            "ab": p_ab,
+            "ag": p_ag,
+        }
+
     if "last_prediction" not in st.session_state:
-        st.session_state["last_prediction"] = None
+        init_gn = 1 if st.session_state["p_gender"] == "Male" else 0
+        st.session_state["last_prediction"] = compute_risk(
+            st.session_state["p_age"], init_gn,
+            st.session_state["p_total_bilirubin"], st.session_state["p_direct_bilirubin"],
+            st.session_state["p_alkaline_phosphotase"], st.session_state["p_alamine_aminotransferase"],
+            st.session_state["p_aspartate_aminotransferase"], st.session_state["p_total_proteins"],
+            st.session_state["p_albumin"], st.session_state["p_albumin_and_globulin_ratio"],
+        )
 
     def on_preset_change():
         choice = st.session_state.get("preset_selection", "Custom")
@@ -769,9 +794,7 @@ with tab5:
         if preset_vals is not None:
             for pk, pv in preset_vals.items():
                 st.session_state[f"p_{pk}"] = pv
-        # Decouple preset from automatic execution: clear previous result & set pending notice
-        st.session_state["last_prediction"] = None
-        st.session_state["pending_preset"] = choice
+        # Existing prediction stays intact until user clicks Predict button
 
     st.selectbox("Load Preset", list(PRESETS.keys()), key="preset_selection", on_change=on_preset_change)
 
@@ -806,38 +829,11 @@ with tab5:
 
     if submitted:
         with st.spinner("Analyzing patient biomarkers across models..."):
-            time.sleep(0.5)  # Perceptible loading feedback for multi-model inference
+            time.sleep(0.5)  # Visible loading feedback for multi-model inference
             gn = 1 if gender == "Male" else 0
-            vec = np.array([[age, gn, tb, db, alp, alt, ast, tp, ab, ag]], dtype=np.float64)
-            svec = bundle["scaler"].transform(vec)
-
-            lr_p = float(bundle["logistic_regression"].predict_proba(svec)[0])
-            lr_c = int(lr_p >= 0.5)
-            ps = float(bundle["perceptron"].decision_function(svec)[0])
-            pc = 1 if ps >= 0 else 0
-            knn_p = float(bundle["knn"].predict_proba(svec)[0])
-            knn_c = int(knn_p >= 0.5)
-            knn_dists, knn_idx = bundle["knn"].kneighbors(svec)
-
-            st.session_state["last_prediction"] = {
-                "lr_p": lr_p,
-                "lr_c": lr_c,
-                "ps": ps,
-                "pc": pc,
-                "knn_p": knn_p,
-                "knn_c": knn_c,
-                "knn_dists": knn_dists,
-                "svec": svec,
-                "tb": tb,
-                "db": db,
-                "alp": alp,
-                "alt": alt,
-                "ast": ast,
-                "tp": tp,
-                "ab": ab,
-                "ag": ag,
-            }
-            st.session_state["pending_preset"] = None
+            st.session_state["last_prediction"] = compute_risk(
+                age, gn, tb, db, alp, alt, ast, tp, ab, ag
+            )
 
     res = st.session_state.get("last_prediction")
     if res is not None:
@@ -961,14 +957,6 @@ with tab5:
                 st.table(pd.DataFrame(flags, columns=["Biomarker", "Value", "Reference", "Status"]))
             else:
                 st.success("All biomarkers within reference intervals.")
-    else:
-        with results_placeholder.container():
-            st.markdown("---")
-            pending = st.session_state.get("pending_preset")
-            if pending and pending != "Custom":
-                st.info(f"**{pending}** profile loaded into the form. Click **Run Patient Risk Assessment** to evaluate.")
-            else:
-                st.info("Adjust the patient biomarkers above or choose a preset, then click **Run Patient Risk Assessment** to generate predictions.")
 
 
 # ─── Footer ───────────────────────────────────────────────
